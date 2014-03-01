@@ -1,0 +1,283 @@
+<?php
+
+/**
+ * Swift Mailer module
+ *
+ * @copyright Copyright (c) 2013-2014, Teppo Koivula
+ * @license http://www.gnu.org/licenses/gpl-2.0.txt GNU General Public License, version 2
+ * 
+ * ProcessWire 2.x 
+ * Copyright (C) 2013 by Ryan Cramer 
+ * Licensed under GNU/GPL v2, see LICENSE.TXT
+ * 
+ * http://www.processwire.com
+ *
+ */
+class WireMailSwiftMailer extends WireMail implements Module, ConfigurableModule {
+
+    /**
+     * Version number of Swift Mailer
+     *
+     */
+    const SWIFT_VERSION = "4.3.1";
+
+    /**
+     * Container for Swift Mailer instance
+     *
+     */
+    protected $swiftMailer;
+
+    /**
+     * getModuleInfo is a module required by all modules to tell ProcessWire about them
+     *
+     * @return array
+     *
+     */
+    public static function getModuleInfo() {
+
+        return array(
+            'title' => 'Swift Mailer',
+            'summary' => __('Provides replacement for PHP mail() function'),
+            'href' => '',
+            'author' => 'Teppo Koivula',
+            'version' => 002,
+            'singular' => true,
+            'autoload' => true,
+        );
+
+    }
+
+    /**
+     * Default configuration for this module
+     *
+     * The point of putting this in it's own function is so that you don't have to specify
+     * these defaults more than once.
+     *
+     * @return array
+     */
+    static public function getDefaultData() {
+        return array(
+            'transport' => 'Smtp',
+            'SMTPPort' => '25',
+            'defaultFrom' => 'processwire@' . wire('config')->httpHost,
+            'defaultFromName' => 'ProcessWire',
+        );
+    }
+    
+    /**
+     * Populate the default config data
+     *
+     * ProcessWire will automatically overwrite it with anything the user has specifically configured.
+     * This is done in construct() rather than init() because ProcessWire populates config data after
+     * construct(), but before init().
+     *
+     */
+    public function __construct() {
+        foreach(self::getDefaultData() as $key => $value) {
+            $this->$key = $value;
+        }
+    }
+
+    /**
+     * Module configuration
+     *
+     * @param array $data
+     * @return InputfieldWrapper
+     */
+    static public function getModuleConfigInputfields(array $data) {
+
+        // this is a container for fields, basically like a fieldset
+        $fields = new InputfieldWrapper();
+
+        // since this is a static function, we can't use $this->modules, so get them from the global wire() function
+        $modules = wire('modules');
+
+        // merge default config settings (custom values overwrite defaults)
+        $defaults = self::getDefaultData();
+        $data = array_merge($defaults, $data);
+
+        // special handling for SMTP password
+        if (isset($data['SMTPPassword2'])) {
+            $data['SMTPPassword'] = $data['SMTPPassword2'];
+            unset($data['SMTPPassword2'], $data['clearSMTPPassword']);
+            wire('modules')->saveModuleConfigData(__CLASS__, $data);
+        } else if (isset($data['clearSMTPPassword']) && $data['clearSMTPPassword']) {
+            unset($data['SMTPPassword'], $data['SMTPPassword2'], $data['clearSMTPPassword']);
+            wire('modules')->saveModuleConfigData(__CLASS__, $data);
+        } else {
+            unset($data['SMTPPassword2'], $data['clearSMTPPassword']);
+            wire('modules')->saveModuleConfigData(__CLASS__, $data);
+        }
+        
+        // Sender address
+        $field = $modules->get("InputfieldText");
+        $field->name = "defaultFrom";
+        $field->label = __("Sender Address");
+        $field->required = true;
+        if (isset($data[$field->name])) $field->value = $data[$field->name];
+        $fields->add($field);
+
+        // Sender name
+        $field = $modules->get("InputfieldText");
+        $field->name = "defaultFromName";
+        $field->label = __("Sender Name");
+        if (isset($data[$field->name])) $field->value = $data[$field->name];
+        $fields->add($field);
+        
+        // Transport
+        $field = $modules->get("InputfieldSelect");
+        $field->name = "transport";
+        $field->label = __("Transport");
+        $field->notes = __("See [Swift Mailer Documentation](http://swiftmailer.org/docs/sending.html#transport-types) for detailed description for each individual Transport.");
+        $field->required = true;
+        $field->addOptions(array(
+            'Smtp' => 'SMTP',
+            'Sendmail' => 'Sendmail',
+            'Mail' => 'Mail'
+        ));
+        if (isset($data[$field->name])) $field->value = $data[$field->name];
+        $fields->add($field);
+
+        // common container (fieldset) for SMTP settings
+        $fieldset = $modules->get("InputfieldFieldset");
+        $fieldset->label = __("SMTP Transport Settings");
+        $fieldset->description = __("These settings only apply to SMTP Transport.");
+
+        // SMTP server name
+        $field = $modules->get("InputfieldText");
+        $field->name = "SMTPServer";
+        $field->label = __("SMTP server name");
+        $field->required = true;
+        if (isset($data[$field->name])) $field->value = $data[$field->name];
+        $fieldset->add($field);
+
+        // SMTP server port
+        $field = $modules->get("InputfieldText");
+        $field->name = "SMTPPort";
+        $field->label = __("SMTP server port");
+        $field->required = true;
+        if (isset($data[$field->name])) $field->value = $data[$field->name];
+        $fieldset->add($field);
+
+        // SMTP encryption
+        $field = $modules->get("InputfieldSelect");
+        $field->name = "SMTPEncryption";
+        $field->label = __("SMTP encryption");
+        $field->addOptions(array(
+            __('None'),
+            'ssl' => 'SSL',
+            'tls' => 'TLS',
+        ));
+        if (isset($data[$field->name])) $field->value = $data[$field->name];
+        $fieldset->add($field);
+
+        // SMTP username
+        $field = $modules->get("InputfieldText");
+        $field->name = "SMTPUsername";
+        $field->label = __("SMTP username");
+        if (isset($data[$field->name])) $field->value = $data[$field->name];
+        $fieldset->add($field);
+
+        // SMTP password
+        $field = $modules->get("InputfieldText");
+        $field->collapsed = true;
+        $field->type = "password";
+        $field->name = "SMTPPassword2";
+        $field->label = __("SMTP password");
+        $field->notes = __("Note: password is stored as plain text in database. THIS IS NOT SECURE. Don't use this setting unless you're fully aware of it's consequences!");
+        $field->columnWidth = 75;
+        $fieldset->add($field);
+
+        // clear SMTP password?
+        $field = $modules->get("InputfieldCheckbox");
+        $field->collapsed = true;
+        $field->name = "clearSMTPPassword";
+        $field->label = __("Clear password?");
+        $field->notes = __("Check and save form to clear stored password.");
+        $field->columnWidth = 25;
+        $fieldset->add($field);
+
+        // add SMTP fields
+        $fields->add($fieldset);
+
+        // Sendmail command
+        $field = $modules->get("InputfieldText");
+        $field->name = "SendmailCommand";
+        $field->label = __("Sendmail command");
+        $field->description = __("This setting only applies to Sendmail Transport.");
+        $field->notes = __("Default value when left blank is /usr/sbin/sendmail -bs");
+        if (isset($data[$field->name])) $field->value = $data[$field->name];
+        $fields->add($field);
+
+        return $fields;
+    }
+
+    /**
+     * Initialize the module
+     *
+     * ProcessWire calls this when the module is loaded. For 'autoload' modules, this will be called
+     * when ProcessWire's API is ready. As a result, this is a good place to attach hooks. 
+     *
+     */
+    public function init() {
+        if ($this->transport != "Smtp" || $this->SMTPServer && $this->SMTPPort && $this->senderAddress) {
+            // init Swift Mailer
+            require("Swift-" . self::SWIFT_VERSION . "/lib/swift_required.php");
+            switch ($this->transport) {
+                case "Smtp":
+                    $transport = Swift_SmtpTransport::newInstance($this->SMTPServer, $this->SMTPPort);
+                    if ($this->SMTPUsername) $transport->setUsername($this->SMTPUsername);
+                    if ($this->SMTPPassword) $transport->setPassword($this->SMTPPassword);
+                    if ($this->SMTPEncryption) $transport->setEncryption($this->SMTPEncryption);
+                    break;
+                case "Sendmail":
+                    $transport = Swift_SendmailTransport::newInstance($this->SendmailCommand);
+                    break;
+                case "Mail":
+                    $transport = Swift_MailTransport::newInstance($this->SMTPServer, $this->SMTPPort);
+                    break;
+                default:
+                    throw new WireException("Transport setting not recognized");
+            }
+            $this->swiftMailer = Swift_Mailer::newInstance($transport);
+        }
+    }
+
+    /**
+     * Send email using Swift Mailer mail() function
+     *
+     * @return int number of recipients accepted for delivery
+     *
+     */
+    public function ___send() {
+
+        // create the message
+        $message = Swift_Message::newInstance()
+            ->setTo($this->to)
+            ->setSubject($this->subject);
+
+        // set body (plain text and/or HTML)
+        if ($this->body) $message->setBody($this->body);
+        if ($this->bodyHTML) {
+            if ($this->body) $message->addPart($this->bodyHTML, "text/html");
+            else $message->setBody($this->bodyHTML, "text/html");
+        }
+
+        // set the From address with an associative array
+        $from = $this->from ? $this->from : $this->defaultFrom;
+        $fromName = $this->fromName ? $this->fromName : $this->defaultFromName;
+        $message->setFrom($fromName ? array($from => $fromName) : array($from));
+
+        // set extra headers
+        if ($this->header) {
+            $headers = $message->getHeaders();
+            foreach ($this->header as $name => $value) {
+                $headers->addTextHeader($name, $value);
+            }
+        }
+
+        return $this->swiftMailer->send($message);
+
+    }
+
+}
