@@ -19,7 +19,7 @@ class WireMailSwiftMailer extends WireMail implements Module, ConfigurableModule
      * Version number of Swift Mailer
      *
      */
-    const SWIFT_VERSION = "4.3.1";
+    const SWIFT_VERSION = "5.0.3";
 
     /**
      * Container for Swift Mailer instance
@@ -40,7 +40,7 @@ class WireMailSwiftMailer extends WireMail implements Module, ConfigurableModule
             'summary' => __('Provides replacement for PHP mail() function'),
             'href' => '',
             'author' => 'Teppo Koivula',
-            'version' => 002,
+            'version' => 003,
             'singular' => true,
             'autoload' => true,
         );
