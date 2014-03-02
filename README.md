@@ -9,8 +9,18 @@ library into ProcessWire.
 ## Getting started
 
 In order to use WireMailSwiftMailer, you'll just have to install the module and
-use ProcessWire's native wireMail() function. For extensive usage instructions
-take a look at the wireMail() function at /wire/core/Functions.php.
+use ProcessWire's wireMail() function. For extensive instructions on that, take
+a look at /wire/core/Functions.php.
+
+Though Swift Mailer supports Mail Transport, i.e. using PHP's mail(), that's not
+always sensible option. Real value of Swift Mailer is in it's Sendmail and SMTP
+Transports.
+
+If you're a Gmail user and only need to send a few mails now and then, following
+DigitalOcean article is helpful for getting started with Gmail's SMTP server:
+https://www.digitalocean.com/community/articles/how-to-use-google-s-smtp-server
+
+## Basic usage
 
 Basic usage is very close to how one would use PHP's native mail() function, but
 the order of arguments is slightly different:
