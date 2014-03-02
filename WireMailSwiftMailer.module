@@ -39,7 +39,7 @@ class WireMailSwiftMailer extends WireMail implements Module, ConfigurableModule
 
         return array(
             'title' => 'Swift Mailer',
-            'summary' => __('Provides replacement for PHP mail() function'),
+            'summary' => __('WireMail module providing Swift Mailer integration'),
             'href' => '',
             'author' => 'Teppo Koivula',
             'version' => 006,
