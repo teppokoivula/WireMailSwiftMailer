@@ -46,7 +46,9 @@ feature of ProcessWire's dev brach.
 
 Swift Mailer is a powerful component based mailing library for PHP. If you want
 to learn more about Swift Mailer and the things it can achieve you should visit
-http://swiftmailer.org/. Swift Mailer is released under the MIT license.
+http://swiftmailer.org/.
+
+Swift Mailer is copyright Fabien Potencier and released under the MIT license.
 
 ## License
 
