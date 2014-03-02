@@ -42,7 +42,7 @@ class WireMailSwiftMailer extends WireMail implements Module, ConfigurableModule
             'summary' => __('Provides replacement for PHP mail() function'),
             'href' => '',
             'author' => 'Teppo Koivula',
-            'version' => 004,
+            'version' => 005,
             'singular' => true,
             'autoload' => true,
         );
@@ -142,8 +142,8 @@ class WireMailSwiftMailer extends WireMail implements Module, ConfigurableModule
 
         // common container (fieldset) for SMTP settings
         $fieldset = $modules->get("InputfieldFieldset");
+        $fieldset->showIf = "transport=Smtp";
         $fieldset->label = __("SMTP Transport Settings");
-        $fieldset->description = __("These settings only apply to SMTP Transport.");
 
         // SMTP server name
         $field = $modules->get("InputfieldText");
@@ -204,9 +204,9 @@ class WireMailSwiftMailer extends WireMail implements Module, ConfigurableModule
 
         // Sendmail command
         $field = $modules->get("InputfieldText");
+        $field->showIf = "transport=Sendmail";
         $field->name = "SendmailCommand";
         $field->label = __("Sendmail command");
-        $field->description = __("This setting only applies to Sendmail Transport.");
         $field->notes = __("Default value when left blank is /usr/sbin/sendmail -bs");
         if (isset($data[$field->name])) $field->value = $data[$field->name];
         $fields->add($field);
