@@ -1,12 +1,42 @@
-Swift Mailer module for ProcessWire CMF/CMS
-===========================================
+Swift Mailer WireMail module for ProcessWire CMF/CMS
+====================================================
 
 Copyright (c) 2013-2014 Teppo Koivula
 
-# WARNING: PROOF OF CONCEPT, NOT INTENDED FOR PRODUCTION USE!
+This module extends WireMail base class, integrating the Swift Mailer mailing
+library into ProcessWire.
 
-This module is still very much a proof of concept and not intended for
-production use. Consider yourself warned.
+## Getting started
+
+In order to use WireMailSwiftMailer, you'll just have to install the module and
+use ProcessWire's native wireMail() function. For extensive usage instructions
+take a look at the wireMail() function at /wire/core/Functions.php.
+
+Basic usage is very close to how one would use PHP's native mail() function, but
+the order of arguments is slightly different:
+
+```
+$number_of_recipients = wireMail($to, $from, $subject, $body);
+```
+
+Like PHP's mail(), wireMail() also returns the number of recipients accepted for
+delivery. Note that this is *not* necessarily the number of recipients actually
+receiving your message, just the number of addresses it was sent to.
+
+## Word of warning
+
+While this module should be fully functional, at least regarding the features it
+currently includes, it's also very rough, doesn't handle more complex things and
+definitely isn't intended for serious production use yet.
+
+Another important thing to note is that as of this writing, WireMail is still a
+feature of ProcessWire's dev brach.
+
+## Swift Mailer
+
+Swift Mailer is a powerful component based mailing library for PHP. If you want
+to learn more about Swift Mailer and the things it can achieve you should visit
+http://swiftmailer.org/. Swift Mailer is released under the MIT license.
 
 ## License
 

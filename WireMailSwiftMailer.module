@@ -1,7 +1,10 @@
 <?php
 
 /**
- * Swift Mailer module
+ * Swift Mailer WireMail module
+ *
+ * This module extends WireMail base class, integrating the Swift Mailer mailing
+ * library into ProcessWire.
  *
  * @copyright Copyright (c) 2013-2014, Teppo Koivula
  * @license http://www.gnu.org/licenses/gpl-2.0.txt GNU General Public License, version 2
@@ -31,7 +34,6 @@ class WireMailSwiftMailer extends WireMail implements Module, ConfigurableModule
      * getModuleInfo is a module required by all modules to tell ProcessWire about them
      *
      * @return array
-     *
      */
     public static function getModuleInfo() {
 
@@ -40,7 +42,7 @@ class WireMailSwiftMailer extends WireMail implements Module, ConfigurableModule
             'summary' => __('Provides replacement for PHP mail() function'),
             'href' => '',
             'author' => 'Teppo Koivula',
-            'version' => 003,
+            'version' => 004,
             'singular' => true,
             'autoload' => true,
         );
@@ -210,6 +212,7 @@ class WireMailSwiftMailer extends WireMail implements Module, ConfigurableModule
         $fields->add($field);
 
         return $fields;
+
     }
 
     /**
@@ -244,10 +247,9 @@ class WireMailSwiftMailer extends WireMail implements Module, ConfigurableModule
     }
 
     /**
-     * Send email using Swift Mailer mail() function
+     * Send email using Swift Mailer send() function
      *
      * @return int number of recipients accepted for delivery
-     *
      */
     public function ___send() {
 
