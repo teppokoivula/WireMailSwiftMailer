@@ -42,7 +42,7 @@ class WireMailSwiftMailer extends WireMail implements Module, ConfigurableModule
             'summary' => __('Provides replacement for PHP mail() function'),
             'href' => '',
             'author' => 'Teppo Koivula',
-            'version' => 005,
+            'version' => 006,
             'singular' => true,
             'autoload' => true,
         );
@@ -150,6 +150,7 @@ class WireMailSwiftMailer extends WireMail implements Module, ConfigurableModule
         $field->name = "SMTPServer";
         $field->label = __("SMTP server name");
         $field->required = true;
+        $field->requiredIf = "transport=Smtp";
         if (isset($data[$field->name])) $field->value = $data[$field->name];
         $fieldset->add($field);
 
@@ -158,6 +159,7 @@ class WireMailSwiftMailer extends WireMail implements Module, ConfigurableModule
         $field->name = "SMTPPort";
         $field->label = __("SMTP server port");
         $field->required = true;
+        $field->requiredIf = "transport=Smtp";
         if (isset($data[$field->name])) $field->value = $data[$field->name];
         $fieldset->add($field);
 
