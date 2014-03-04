@@ -46,9 +46,9 @@ class WireMailSwiftMailer extends WireMail implements Module, ConfigurableModule
         return array(
             'title' => 'Swift Mailer',
             'summary' => __('WireMail module providing Swift Mailer integration'),
-            'href' => '',
+            'href' => 'http://modules.processwire.com/modules/wire-mail-swift-mailer/',
             'author' => 'Teppo Koivula',
-            'version' => 10,
+            'version' => 11,
             'singular' => true,
             'autoload' => true,
         );
