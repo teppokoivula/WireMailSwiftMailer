@@ -48,7 +48,7 @@ class WireMailSwiftMailer extends WireMail implements Module, ConfigurableModule
             'summary' => __('WireMail module providing Swift Mailer integration'),
             'href' => 'http://modules.processwire.com/modules/wire-mail-swift-mailer/',
             'author' => 'Teppo Koivula',
-            'version' => 11,
+            'version' => 12,
             'singular' => true,
             'autoload' => true,
         );
@@ -148,7 +148,7 @@ class WireMailSwiftMailer extends WireMail implements Module, ConfigurableModule
 
         // common container (fieldset) for SMTP settings
         $fieldset = $modules->get("InputfieldFieldset");
-        $fieldset->showIf = "transport=Smtp";
+        # $fieldset->showIf = "transport=Smtp";
         $fieldset->label = __("SMTP Transport Settings");
 
         // SMTP server name
