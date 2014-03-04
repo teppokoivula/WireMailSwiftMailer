@@ -31,6 +31,12 @@ class WireMailSwiftMailer extends WireMail implements Module, ConfigurableModule
     protected $swiftMailer;
 
     /**
+     * Container for connection exception
+     *
+     */
+    protected $exception;
+
+    /**
      * getModuleInfo is a module required by all modules to tell ProcessWire about them
      *
      * @return array
@@ -42,7 +48,7 @@ class WireMailSwiftMailer extends WireMail implements Module, ConfigurableModule
             'summary' => __('WireMail module providing Swift Mailer integration'),
             'href' => '',
             'author' => 'Teppo Koivula',
-            'version' => 006,
+            'version' => 10,
             'singular' => true,
             'autoload' => true,
         );
@@ -65,7 +71,7 @@ class WireMailSwiftMailer extends WireMail implements Module, ConfigurableModule
             'defaultFromName' => 'ProcessWire',
         );
     }
-    
+
     /**
      * Populate the default config data
      *
@@ -110,7 +116,7 @@ class WireMailSwiftMailer extends WireMail implements Module, ConfigurableModule
             unset($data['SMTPPassword2'], $data['clearSMTPPassword']);
             wire('modules')->saveModuleConfigData(__CLASS__, $data);
         }
-        
+
         // Sender address
         $field = $modules->get("InputfieldText");
         $field->name = "defaultFrom";
@@ -249,6 +255,22 @@ class WireMailSwiftMailer extends WireMail implements Module, ConfigurableModule
     }
 
     /**
+     * Called by ProcessWire when API is fully ready with known $page
+     *
+     * We're using this to automatically alert the user in case that there's
+     * a connection problem (most commonly with provided SMTP credentials).
+     *
+     */
+    public function ready() {
+        if ($this->page->process == "ProcessModule" && $this->input->get->name == __CLASS__ && !count($this->input->post)) {
+            if (!$this->checkConnection()) {
+                $this->error($this->getException()->getMessage());
+                $this->message(__("Connection problem detected, please check your settings or select another method of transport. ProcessWire may not be able to send email at the moment."));
+            }
+        }
+    }
+
+    /**
      * Send email using Swift Mailer send() function
      *
      * @return int number of recipients accepted for delivery
@@ -282,6 +304,35 @@ class WireMailSwiftMailer extends WireMail implements Module, ConfigurableModule
 
         return $this->swiftMailer->send($message);
 
+    }
+
+    /**
+     * Check if SMTP connection is available
+     *
+     * This is mostly useful for SMTP, but can also be used to check if Swift
+     * Mailer has been properly loaded and instantiated. If an SMTP connection
+     * fails, you can get the caught exception with getException().
+     * 
+     * @return bool TRUE if connection is OK, FALSE if not
+     */
+    public function checkConnection() {
+        if (!$this->swiftMailer) return false;
+        if ($this->transport != "Smtp") return true;
+        try {
+            $this->swiftMailer->getTransport()->start();
+        } catch (Swift_TransportException $e) {
+            $this->exception = $e;
+            return false;
+        }
+    }
+
+    /**
+     * Return SMTP connection exception (if exists)
+     *
+     * @return null|Swift_TransportException
+     */
+    public function getException() {
+        return $this->exception;
     }
 
 }
