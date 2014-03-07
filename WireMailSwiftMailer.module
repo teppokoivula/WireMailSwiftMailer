@@ -48,7 +48,7 @@ class WireMailSwiftMailer extends WireMail implements Module, ConfigurableModule
             'summary' => __('WireMail module providing Swift Mailer integration'),
             'href' => 'http://modules.processwire.com/modules/wire-mail-swift-mailer/',
             'author' => 'Teppo Koivula',
-            'version' => 15,
+            'version' => 16,
         );
 
     }
@@ -229,27 +229,32 @@ class WireMailSwiftMailer extends WireMail implements Module, ConfigurableModule
      *
      */
     public function init() {
-        if ($this->transport != "Smtp" || $this->SMTPServer && $this->SMTPPort && $this->senderAddress) {
-            // init Swift Mailer
-            require_once(dirname(__FILE__) . "/Swift-" . self::SWIFT_VERSION . "/lib/swift_required.php");
-            switch ($this->transport) {
-                case "Smtp":
-                    $transport = Swift_SmtpTransport::newInstance($this->SMTPServer, $this->SMTPPort);
-                    if ($this->SMTPUsername) $transport->setUsername($this->SMTPUsername);
-                    if ($this->SMTPPassword) $transport->setPassword($this->SMTPPassword);
-                    if ($this->SMTPEncryption) $transport->setEncryption($this->SMTPEncryption);
-                    break;
-                case "Sendmail":
-                    $transport = Swift_SendmailTransport::newInstance($this->SendmailCommand);
-                    break;
-                case "Mail":
-                    $transport = Swift_MailTransport::newInstance($this->SMTPServer, $this->SMTPPort);
-                    break;
-                default:
-                    throw new WireException("Transport setting not recognized");
-            }
-            $this->swiftMailer = Swift_Mailer::newInstance($transport);
+
+        // if SMTP is selected but not yet properly configured, fallback to Mail
+        if ($this->transport == "Smtp" && !($this->SMTPServer && $this->SMTPPort)) {
+            $this->transport = "Mail";
         }
+
+        // init and configure Swift Mailer
+        require_once(dirname(__FILE__) . "/Swift-" . self::SWIFT_VERSION . "/lib/swift_required.php");
+        switch ($this->transport) {
+            case "Smtp":
+                $transport = Swift_SmtpTransport::newInstance($this->SMTPServer, $this->SMTPPort);
+                if ($this->SMTPUsername) $transport->setUsername($this->SMTPUsername);
+                if ($this->SMTPPassword) $transport->setPassword($this->SMTPPassword);
+                if ($this->SMTPEncryption) $transport->setEncryption($this->SMTPEncryption);
+                break;
+            case "Sendmail":
+                $transport = Swift_SendmailTransport::newInstance($this->SendmailCommand);
+                break;
+            case "Mail":
+                $transport = Swift_MailTransport::newInstance($this->SMTPServer, $this->SMTPPort);
+                break;
+            default:
+                throw new WireException("Transport setting not recognized");
+        }
+        $this->swiftMailer = Swift_Mailer::newInstance($transport);
+
     }
 
     /**
