@@ -48,8 +48,7 @@ class WireMailSwiftMailer extends WireMail implements Module, ConfigurableModule
             'summary' => __('WireMail module providing Swift Mailer integration'),
             'href' => 'http://modules.processwire.com/modules/wire-mail-swift-mailer/',
             'author' => 'Teppo Koivula',
-            'version' => 13,
-            'autoload' => true,
+            'version' => 15,
         );
 
     }
@@ -232,7 +231,7 @@ class WireMailSwiftMailer extends WireMail implements Module, ConfigurableModule
     public function init() {
         if ($this->transport != "Smtp" || $this->SMTPServer && $this->SMTPPort && $this->senderAddress) {
             // init Swift Mailer
-            require("Swift-" . self::SWIFT_VERSION . "/lib/swift_required.php");
+            require_once(dirname(__FILE__) . "/Swift-" . self::SWIFT_VERSION . "/lib/swift_required.php");
             switch ($this->transport) {
                 case "Smtp":
                     $transport = Swift_SmtpTransport::newInstance($this->SMTPServer, $this->SMTPPort);
