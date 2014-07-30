@@ -16,7 +16,7 @@
  * http://www.processwire.com
  *
  */
-class WireMailSwiftMailer extends WireMail implements Module, ConfigurableModule {
+class WireMailSwiftMailer extends WireMail implements Module, ConfigurableModule, WireMailInterface {
 
     /**
      * Version number of Swift Mailer
@@ -42,15 +42,13 @@ class WireMailSwiftMailer extends WireMail implements Module, ConfigurableModule
      * @return array
      */
     public static function getModuleInfo() {
-
         return array(
             'title' => 'Swift Mailer',
             'summary' => __('WireMail module providing Swift Mailer integration'),
             'href' => 'http://modules.processwire.com/modules/wire-mail-swift-mailer/',
             'author' => 'Teppo Koivula',
-            'version' => 16,
+            'version' => 17,
         );
-
     }
 
     /**
