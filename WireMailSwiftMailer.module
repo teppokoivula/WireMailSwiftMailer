@@ -22,7 +22,7 @@ class WireMailSwiftMailer extends WireMail implements Module, ConfigurableModule
      * Version number of Swift Mailer
      *
      */
-    const SWIFT_VERSION = "5.0.3";
+    const SWIFT_VERSION = "5.2.1";
 
     /**
      * Container for Swift Mailer instance
@@ -47,7 +47,7 @@ class WireMailSwiftMailer extends WireMail implements Module, ConfigurableModule
             'summary' => __('WireMail module providing Swift Mailer integration'),
             'href' => 'http://modules.processwire.com/modules/wire-mail-swift-mailer/',
             'author' => 'Teppo Koivula',
-            'version' => 17,
+            'version' => 18,
         );
     }
 
@@ -225,6 +225,7 @@ class WireMailSwiftMailer extends WireMail implements Module, ConfigurableModule
      * ProcessWire calls this when the module is loaded. For 'autoload' modules, this will be called
      * when ProcessWire's API is ready. As a result, this is a good place to attach hooks. 
      *
+     * @throws WireException if unrecognized (invalid) transport setting was defined
      */
     public function init() {
 
