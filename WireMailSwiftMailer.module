@@ -47,7 +47,7 @@ class WireMailSwiftMailer extends WireMail implements Module, ConfigurableModule
             'summary' => __('WireMail module providing Swift Mailer integration'),
             'href' => 'http://modules.processwire.com/modules/wire-mail-swift-mailer/',
             'author' => 'Teppo Koivula',
-            'version' => '0.1.10',
+            'version' => '0.1.11',
         );
     }
 
@@ -91,15 +91,33 @@ class WireMailSwiftMailer extends WireMail implements Module, ConfigurableModule
     static public function getModuleConfigInputfields(array $data) {
 
         if (wire('input')->post->_checkConnection) {
-            // alert the user if there's a connection problem
+            // make sure that module config data is up to date
+            $configData = wire('modules')->getModuleConfigData(__CLASS__);
+            $configDataChanged = false;
+            foreach (wire('input')->post as $key => $value) {
+                if (array_key_exists($key, $configData) && $configData[$key] != $value) {
+                    $configData[$key] = $value;
+                    $configDataChanged = true;
+                }
+            }
+            if ($configDataChanged) {
+                wire('modules')->saveModuleConfigData(__CLASS__, $configData);
+            }
+            // check connection and alert the user if there's a problem
             $swiftMailer = wire('modules')->get('WireMailSwiftMailer');
-            if ($swiftMailer->checkConnection()) {
+            $result = $swiftMailer->checkConnection();
+            if ($result) {
                 wire()->message(__("Connection checked and everything seems to be working just fine. You're good to go."));
             } else {
                 $exception = $swiftMailer->getException();
                 if ($exception) wire()->error($exception->getMessage());
-                wire()->message(__("Connection problem detected, please check your settings or select another method of transport. ProcessWire may not be able to send email at the moment."));
+                wire()->error(__("Connection problem detected, please check your settings or select another method of transport. ProcessWire may not be able to send email at the moment."));
             }
+            // store timestamp and result of this check to module config
+            $configData['connectionStatus'] = (int) $result . "|" . time();
+            $data['connectionStatus'] = $configData['connectionStatus'];
+            wire('modules')->saveModuleConfigData(__CLASS__, $configData);
+            wire('session')->redirect('./edit?name=' . __CLASS__, false);
         }
 
         // this is a container for fields, basically like a fieldset
@@ -232,8 +250,16 @@ class WireMailSwiftMailer extends WireMail implements Module, ConfigurableModule
         $field->icon = "bolt";
         $field->name = "_checkConnection";
         $field->label = __("Check connection");
-        $field->description = __("Check this field if you want to run connection test after submitting module settings. If you change connection settings and check connection using this checkbox at the same time, results are likely to be unreliable.");
-        $field->notes = __("Note: it's recommended to make changes and check connection separately.");
+        $field->label2 = __("Check connection now");
+        $field->description = __("Check this field if you want to run connection test after submitting module settings.");
+        if (isset($data['connectionStatus'])) {
+            $status = explode("|", $data['connectionStatus']);
+            $status_texts = array(
+                0 => __("Previous check performed %s was a failure."),
+                1 => __("Previous check performed %s was a success."),
+            );
+            $field->notes = sprintf($status_texts[$status[0]], date("j.n.Y H:i", $status[1]));
+        }
         $fields->add($field);
 
         return $fields;
