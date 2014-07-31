@@ -47,7 +47,7 @@ class WireMailSwiftMailer extends WireMail implements Module, ConfigurableModule
             'summary' => __('WireMail module providing Swift Mailer integration'),
             'href' => 'http://modules.processwire.com/modules/wire-mail-swift-mailer/',
             'author' => 'Teppo Koivula',
-            'version' => '0.1.11',
+            'version' => '0.1.12',
         );
     }
 
@@ -115,7 +115,6 @@ class WireMailSwiftMailer extends WireMail implements Module, ConfigurableModule
             }
             // store timestamp and result of this check to module config
             $configData['connectionStatus'] = (int) $result . "|" . time();
-            $data['connectionStatus'] = $configData['connectionStatus'];
             wire('modules')->saveModuleConfigData(__CLASS__, $configData);
             wire('session')->redirect('./edit?name=' . __CLASS__, false);
         }
