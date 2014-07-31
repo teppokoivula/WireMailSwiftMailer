@@ -47,7 +47,7 @@ class WireMailSwiftMailer extends WireMail implements Module, ConfigurableModule
             'summary' => __('WireMail module providing Swift Mailer integration'),
             'href' => 'http://modules.processwire.com/modules/wire-mail-swift-mailer/',
             'author' => 'Teppo Koivula',
-            'version' => '0.1.12',
+            'version' => '0.2.0',
         );
     }
 
@@ -89,6 +89,22 @@ class WireMailSwiftMailer extends WireMail implements Module, ConfigurableModule
      * @return InputfieldWrapper
      */
     static public function getModuleConfigInputfields(array $data) {
+
+        $testSubject = null;
+        $testBody = null;
+        $testTo = null;
+        if (wire('input')->post->_testSubject || wire('input')->post->_testBody || wire('input')->post->_testTo) {
+            $testSubject = wire('input')->post->_testSubject;
+            $testBody = wire('input')->post->_testBody;
+            $testTo = wire('input')->post->_testTo;
+            if ($testSubject && $testBody && $testTo) {
+                $testTo = strpos($testTo, ",") ? explode(",", $testTo) : array($testTo);
+                $num = wireMail($testTo, $data['defaultFrom'], $testSubject, $testBody);
+                wire()->message(sprintf(__("A test message was just sent to %d recipients"), $num));
+            } else {
+                wire()->error(__("In order to send a test message you need to fill in subject, body and recipient!"));
+            }
+        }
 
         if (wire('input')->post->_checkConnection) {
             // make sure that module config data is up to date
@@ -142,7 +158,7 @@ class WireMailSwiftMailer extends WireMail implements Module, ConfigurableModule
             wire('modules')->saveModuleConfigData(__CLASS__, $data);
         }
 
-        // Sender address
+        // sender address
         $field = $modules->get("InputfieldText");
         $field->name = "defaultFrom";
         $field->label = __("Sender Address");
@@ -150,14 +166,14 @@ class WireMailSwiftMailer extends WireMail implements Module, ConfigurableModule
         if (isset($data[$field->name])) $field->value = $data[$field->name];
         $fields->add($field);
 
-        // Sender name
+        // sender name
         $field = $modules->get("InputfieldText");
         $field->name = "defaultFromName";
         $field->label = __("Sender Name");
         if (isset($data[$field->name])) $field->value = $data[$field->name];
         $fields->add($field);
         
-        // Transport
+        // transport
         $field = $modules->get("InputfieldSelect");
         $field->name = "transport";
         $field->label = __("Transport");
@@ -175,6 +191,7 @@ class WireMailSwiftMailer extends WireMail implements Module, ConfigurableModule
         $fieldset = $modules->get("InputfieldFieldset");
         $fieldset->showIf = "transport=Smtp";
         $fieldset->label = __("SMTP Transport Settings");
+        $fields->add($fieldset);
 
         // SMTP server name
         $field = $modules->get("InputfieldText");
@@ -232,9 +249,6 @@ class WireMailSwiftMailer extends WireMail implements Module, ConfigurableModule
         $field->columnWidth = 25;
         $fieldset->add($field);
 
-        // add SMTP fields
-        $fields->add($fieldset);
-
         // Sendmail command
         $field = $modules->get("InputfieldText");
         $field->showIf = "transport=Sendmail";
@@ -244,13 +258,18 @@ class WireMailSwiftMailer extends WireMail implements Module, ConfigurableModule
         if (isset($data[$field->name])) $field->value = $data[$field->name];
         $fields->add($field);
 
+        // common container (fieldset) for testing tools
+        $fieldset = $modules->get("InputfieldFieldset");
+        $fieldset->label = __("Check connection");
+        $fieldset->icon = "bolt";
+        $fields->add($fieldset);
+
         // check connection
         $field = $modules->get("InputfieldCheckbox");
-        $field->icon = "bolt";
         $field->name = "_checkConnection";
-        $field->label = __("Check connection");
+        $field->label = " ";
         $field->label2 = __("Check connection now");
-        $field->description = __("Check this field if you want to run connection test after submitting module settings.");
+        $field->description = __("Check this field if you want to run connection test after module settings are submitted. This will check if connection is functioning properly (i.e. SMTP server can be connected to and accepts defined credentials), but only way to know for sure that sending emails is possible is by sending a test message.");
         if (isset($data['connectionStatus'])) {
             $status = explode("|", $data['connectionStatus']);
             $status_texts = array(
@@ -259,7 +278,49 @@ class WireMailSwiftMailer extends WireMail implements Module, ConfigurableModule
             );
             $field->notes = sprintf($status_texts[$status[0]], date("j.n.Y H:i", $status[1]));
         }
-        $fields->add($field);
+        $fieldset->add($field);
+
+        // common container (form) for test message
+        $form = $modules->get("InputfieldForm");
+        $form->label = __("Send a test message");
+        $form->collapsed = ($testSubject || $testBody || $testTo) ? false : true;
+        $form->icon = "envelope";
+        $fieldset->add($form);
+        
+        // help text for test message
+        $field = $modules->get("InputfieldMarkup");
+        $field->description = __("Using this tool you can send a test message using current settings. Please fill in all the fields. Note that submitting this form will clear all unsaved values from current config screen, so remember to save your changes before sending a test message!");
+        $form->add($field);
+
+        // subject for test message
+        $field = $modules->get("InputfieldText");
+        $field->name = "_testSubject";
+        $field->label = __("Message subject");
+        if ($testSubject) $field->value = $testSubject;
+        else if (!$form->collapsed) $field->error(__("Missing required value"));
+        $form->add($field);
+
+        // body for test message
+        $field = $modules->get("InputfieldTextarea");
+        $field->name = "_testBody";
+        $field->label = __("Message body");
+        if ($testBody) $field->value = $testBody;
+        else if (!$form->collapsed) $field->error(__("Missing required value"));
+        $form->add($field);
+
+        // recipient(s) for test message
+        $field = $modules->get("InputfieldText");
+        $field->name = "_testTo";
+        $field->label = __("Recipient(s)");
+        $field->notes = __("One or more recipients. Multiple recipients should be separated by commas.");
+        if ($testTo) $field->value = $testTo;
+        else if (!$form->collapsed) $field->error(__("Missing required value"));
+        $form->add($field);
+
+        // submit button for test message
+        $field = $modules->get("InputfieldSubmit");
+        $field->value = __("Send test message");
+        $form->add($field);
 
         return $fields;
 
