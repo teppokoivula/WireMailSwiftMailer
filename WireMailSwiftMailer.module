@@ -47,7 +47,7 @@ class WireMailSwiftMailer extends WireMail implements Module, ConfigurableModule
             'summary' => __('WireMail module providing Swift Mailer integration'),
             'href' => 'http://modules.processwire.com/modules/wire-mail-swift-mailer/',
             'author' => 'Teppo Koivula',
-            'version' => '0.2.0',
+            'version' => '0.2.1',
         );
     }
 
@@ -98,8 +98,8 @@ class WireMailSwiftMailer extends WireMail implements Module, ConfigurableModule
             $testBody = wire('input')->post->_testBody;
             $testTo = wire('input')->post->_testTo;
             if ($testSubject && $testBody && $testTo) {
-                $testTo = strpos($testTo, ",") ? explode(",", $testTo) : array($testTo);
-                $num = wireMail($testTo, $data['defaultFrom'], $testSubject, $testBody);
+                $testToArray = strpos($testTo, ",") ? explode(",", $testTo) : array($testTo);
+                $num = wireMail($testToArray, $data['defaultFrom'], $testSubject, $testBody);
                 wire()->message(sprintf(__("A test message was just sent to %d recipients"), $num));
             } else {
                 wire()->error(__("In order to send a test message you need to fill in subject, body and recipient!"));
