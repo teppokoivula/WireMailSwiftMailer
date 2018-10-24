@@ -47,7 +47,7 @@ class WireMailSwiftMailer extends WireMail implements Module, ConfigurableModule
             'summary' => __('WireMail module providing Swift Mailer integration'),
             'href' => 'http://modules.processwire.com/modules/wire-mail-swift-mailer/',
             'author' => 'Teppo Koivula',
-            'version' => '0.2.1',
+            'version' => '0.2.2',
         );
     }
 
@@ -146,7 +146,7 @@ class WireMailSwiftMailer extends WireMail implements Module, ConfigurableModule
         $data = array_merge($defaults, $data);
 
         // special handling for SMTP password
-        if (isset($data['SMTPPassword2'])) {
+        if (isset($data['SMTPPassword2']) && $data['SMTPPassword2']) {
             $data['SMTPPassword'] = $data['SMTPPassword2'];
             unset($data['SMTPPassword2'], $data['clearSMTPPassword']);
             wire('modules')->saveModuleConfigData(__CLASS__, $data);
