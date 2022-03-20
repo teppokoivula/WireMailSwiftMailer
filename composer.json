@@ -1,0 +1,6 @@
+{
+    "name": "teppokoivula/wire-mail-swift-mailer",
+    "require": {
+        "swiftmailer/swiftmailer": "^6.0"
+    }
+}

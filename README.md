@@ -3,6 +3,14 @@ Swift Mailer WireMail module for ProcessWire CMF/CMS
 
 Copyright (c) 2013-2014 Teppo Koivula
 
+**NOTE: SwiftMailer has been discontinued. This module may still work, but will
+no longer receive updates. It is highly recommended to move to another WireMail
+module, such as https://processwire.com/modules/wire-mail-smtp/.**
+
+**Module version 0.3.0 dropped support to Mail transport. Please change to SMTP
+or Sendmail transport instead. Mail transport was removed from SwiftMailer 6.x,
+and thus no longer works; having it selected will fall back to PHP mail().**
+
 This module extends WireMail base class, integrating the Swift Mailer mailing
 library into ProcessWire.
 
@@ -46,7 +54,7 @@ feature of ProcessWire's dev brach.
 
 Swift Mailer is a powerful component based mailing library for PHP. If you want
 to learn more about Swift Mailer and the things it can achieve you should visit
-http://swiftmailer.org/.
+https://swiftmailer.symfony.com/docs/introduction.html.
 
 Swift Mailer is copyright Fabien Potencier and released under the MIT license.
 

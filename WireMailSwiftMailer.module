@@ -6,23 +6,10 @@
  * This module extends WireMail base class, integrating the Swift Mailer mailing
  * library into ProcessWire.
  *
- * @copyright Copyright (c) 2013-2014, Teppo Koivula
+ * @copyright 2013-2022 Teppo Koivula
  * @license http://www.gnu.org/licenses/gpl-2.0.txt GNU General Public License, version 2
- * 
- * ProcessWire 2.x 
- * Copyright (C) 2013 by Ryan Cramer 
- * Licensed under GNU/GPL v2, see LICENSE.TXT
- * 
- * http://www.processwire.com
- *
  */
 class WireMailSwiftMailer extends WireMail implements Module, ConfigurableModule, WireMailInterface {
-
-    /**
-     * Version number of Swift Mailer
-     *
-     */
-    const SWIFT_VERSION = "5.2.1";
 
     /**
      * Container for Swift Mailer instance
@@ -47,7 +34,7 @@ class WireMailSwiftMailer extends WireMail implements Module, ConfigurableModule
             'summary' => __('WireMail module providing Swift Mailer integration'),
             'href' => 'http://modules.processwire.com/modules/wire-mail-swift-mailer/',
             'author' => 'Teppo Koivula',
-            'version' => '0.2.2',
+            'version' => '0.3.0',
         );
     }
 
@@ -99,8 +86,14 @@ class WireMailSwiftMailer extends WireMail implements Module, ConfigurableModule
             $testTo = wire('input')->post->_testTo;
             if ($testSubject && $testBody && $testTo) {
                 $testToArray = strpos($testTo, ",") ? explode(",", $testTo) : array($testTo);
-                $num = wireMail($testToArray, $data['defaultFrom'], $testSubject, $testBody);
-                wire()->message(sprintf(__("A test message was just sent to %d recipients"), $num));
+                $swiftMailer = wire('modules')->get('WireMailSwiftMailer');
+                if ($swiftMailer->swiftMailer) {
+                    $num = $swiftMailer->swiftMailerSend($testToArray, $testSubject, $testBody, null, $data['defaultFrom']);
+                    wire()->message(sprintf(__("A test message was just sent to %d recipients"), $num));
+                } else {
+                    $num = $swiftMailer->wireMailSend($testToArray, $testSubject, $testBody, null, $data['defaultFrom']);
+                    wire()->warning(sprintf(__("A test message was just sent to %d recipients, but using WireMail, since SwiftMailer is not properly configured"), $num));
+                }
             } else {
                 wire()->error(__("In order to send a test message you need to fill in subject, body and recipient!"));
             }
@@ -177,14 +170,16 @@ class WireMailSwiftMailer extends WireMail implements Module, ConfigurableModule
         $field = $modules->get("InputfieldSelect");
         $field->name = "transport";
         $field->label = __("Transport");
-        $field->notes = __("See [Swift Mailer Documentation](http://swiftmailer.org/docs/sending.html#transport-types) for detailed description for each individual Transport.");
+        $field->notes = __("See [Swift Mailer Documentation](https://swiftmailer.symfony.com/docs/sending.html#transport-types) for detailed description for each individual Transport.");
         $field->required = true;
         $field->addOptions(array(
             'Smtp' => 'SMTP',
             'Sendmail' => 'Sendmail',
-            'Mail' => 'Mail'
         ));
         if (isset($data[$field->name])) $field->value = $data[$field->name];
+        if ($field->value == 'Mail') {
+            wire()->error("Mail transport setting is no longer supported by SwiftMailer, please use SMTP or Sendmail instead. Falling back to PHP mail().");
+        }
         $fields->add($field);
 
         // common container (fieldset) for SMTP settings
@@ -336,30 +331,25 @@ class WireMailSwiftMailer extends WireMail implements Module, ConfigurableModule
      */
     public function init() {
 
-        // if SMTP is selected but not yet properly configured, fallback to Mail
-        if ($this->transport == "Smtp" && !($this->SMTPServer && $this->SMTPPort)) {
-            $this->transport = "Mail";
-        }
-
         // init and configure Swift Mailer
-        require_once(dirname(__FILE__) . "/Swift-" . self::SWIFT_VERSION . "/lib/swift_required.php");
+        require_once(dirname(__FILE__) . "/vendor/autoload.php");
+        $transport = null;
         switch ($this->transport) {
             case "Smtp":
-                $transport = Swift_SmtpTransport::newInstance($this->SMTPServer, $this->SMTPPort);
+                $transport = new \Swift_SmtpTransport($this->SMTPServer, $this->SMTPPort, $this->SMTPEncryption ?: null);
                 if ($this->SMTPUsername) $transport->setUsername($this->SMTPUsername);
                 if ($this->SMTPPassword) $transport->setPassword($this->SMTPPassword);
-                if ($this->SMTPEncryption) $transport->setEncryption($this->SMTPEncryption);
                 break;
             case "Sendmail":
-                $transport = Swift_SendmailTransport::newInstance($this->SendmailCommand);
+                $transport = new \Swift_SendmailTransport($this->SendmailCommand);
                 break;
             case "Mail":
-                $transport = Swift_MailTransport::newInstance($this->SMTPServer, $this->SMTPPort);
+                $this->error("Mail transport setting is no longer supported by SwiftMailer, please use SMTP or Sendmail instead");
                 break;
             default:
                 throw new WireException("Transport setting not recognized");
         }
-        $this->swiftMailer = Swift_Mailer::newInstance($transport);
+        $this->swiftMailer = $transport === null ? null : new \Swift_Mailer($transport);
 
     }
 
@@ -369,17 +359,53 @@ class WireMailSwiftMailer extends WireMail implements Module, ConfigurableModule
      * @return int number of recipients accepted for delivery
      */
     public function ___send() {
+        if ($this->swiftMailer) {
+            return $this->swiftMailerSend(
+                $this->to,
+                $this->subject,
+                $this->body,
+                $this->bodyHTML,
+                $this->from,
+                $this->fromName,
+                $this->header
+            );
+        }
+
+        // fall back to native PHP mail() via WireMail
+        return $this->wireMailSend(
+            $this->to,
+            $this->subject,
+            $this->body,
+            $this->bodyHTML,
+            $this->from,
+            $this->fromName,
+            $this->header
+        );
+    }
+
+    /**
+     * Send message via Swift Mailer
+     *
+     * @param string|array $to
+     * @param string $subject
+     * @param string|null $body
+     * @param string|null $bodyHTML
+     * @param string|null $from
+     * @param string|null $fromName
+     * @param array|null $header
+     * @return int
+     *
+     * @internal
+     */
+    public function swiftMailerSend($to, $subject, $body = null, $bodyHTML = null, $from = null, $fromName = null, $header = null) {
 
         // create the message
-        $message = Swift_Message::newInstance()
-            ->setTo($this->to)
-            ->setSubject($this->subject);
+        $message = (new \Swift_Message($subject, $body ?: $bodyHTML, !$body && $bodyHTML ? 'text/html' : null))
+            ->setTo($to);
 
-        // set body (plain text and/or HTML)
-        if ($this->body) $message->setBody($this->body);
-        if ($this->bodyHTML) {
-            if ($this->body) $message->addPart($this->bodyHTML, "text/html");
-            else $message->setBody($this->bodyHTML, "text/html");
+        // set additional HTML body
+        if ($body && $bodyHTML) {
+            $message->addPart($bodyHTML, "text/html");
         }
 
         // set the From address with an associative array
@@ -396,7 +422,35 @@ class WireMailSwiftMailer extends WireMail implements Module, ConfigurableModule
         }
 
         return $this->swiftMailer->send($message);
+    }
 
+    /**
+     * Send message via WireMail
+     *
+     * @param string|array $to
+     * @param string $subject
+     * @param string|null $body
+     * @param string|null $bodyHTML
+     * @param string|null $from
+     * @param string|null $fromName
+     * @param array|null $header
+     * @return int
+     *
+     * @internal
+     */
+    public function wireMailSend($to, $subject, $body = null, $bodyHTML = null, $from = null, $fromName = null, $header = null) {
+        $wireMail = ($this->wire(new WireMail()));
+        $wireMail->to($to);
+        $wireMail->from($from);
+        $wireMail->subject($subject);
+        $wireMail->body($body);
+        if ($bodyHTML) {
+            $wireMail->bodyHTML($bodyHTML);
+        }
+        if ($header) {
+            $wireMail->header($header);
+        }
+        return $wireMail->send();
     }
 
     /**
